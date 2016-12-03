@@ -15,11 +15,12 @@ def z_err(zeri_list, LSTM_freq):
 	f_error = 0.
 	for z in zeri_list:
 		f_error += LSTM_freq[z]
+	return f_error
 
 def stampa_err(argv, L2_modif, z_err, L):
 	orig = sys.stdout
 	f = open("6_risultati_serial.dat", "a")
 	sys.stdout = f
-	print int(argv[1]),  L2_modif,  z_error, L,  argv[4], argv[2], float(argv[3])
+	print int(argv[1]),  L2_modif,  z_err, L,  argv[4], argv[2], float(argv[3])
 	sys.stdout = orig
 	f.close()

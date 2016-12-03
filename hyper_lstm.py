@@ -11,7 +11,7 @@ argv = sys.argv
 assert len(sys.argv) == 5
 assert argv[2] in ['output_gate=yes','output_gate=no']
 
-Lgt = 399999
+Lgt = 100000
 num_nodes = int(argv[1])
 out_gate = argv[2]
 dropout_par = float(argv[3])
@@ -42,6 +42,6 @@ LSTM_text = genera_testo(Lgt, graph, save_path)
 LSTM_2_to_1, LSTM_dict, LSTM_freq, _ = estrai_matrice(LSTM_text)
 
 
-L2_modif = mtr.L2_modif(tr_M_ref, tr_M, zeri_list_ref)
+L2_modif = mtr.L2_modif(M_2_to_1, LSTM_2_to_1, zeri_list)
 z_err = mtr.z_err(zeri_list, LSTM_freq)
 mtr.stampa_err(argv, L2_modif, z_err, Lgt)
