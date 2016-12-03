@@ -5,13 +5,13 @@
 # arg required in input:  hidden_units 'output_gate=yes'/'output_gate=no' dropout_param     n_train_steps
 #
 from package.dependences import *
-
+import package.metriche as mtr
 
 argv = sys.argv
 assert len(sys.argv) == 5
 assert argv[2] in ['output_gate=yes','output_gate=no']
 
-Lgt = 399999
+Lgt = 100000
 num_nodes = int(argv[1])
 out_gate = argv[2]
 dropout_par = float(argv[3])
@@ -41,23 +41,7 @@ LSTM_text = genera_testo(Lgt, graph, save_path)
 
 LSTM_2_to_1, LSTM_dict, LSTM_freq, _ = estrai_matrice(LSTM_text)
 
-def rate_difference(tr_M_ref, tr_M, zeri_list_ref):
-	assert tr_M_ref.shape == tr_M.shape
-	matrice = []
-	for i in range(len(tr_M_ref)):
-		if matrix_element2char(i) not in zeri_list_ref:
-			matrice.append(tr_M_ref[i]-tr_M[i])
-	matrice = np.array(matrice)
-	return np.sqrt((matrice**2).mean())
 
-f_error = 0.
-for z in zeri_list:
-	f_error += LSTM_freq[z]
-
-
-orig = sys.stdout
-f = open("6_risultati_serial.dat", "a")
-sys.stdout = f
-print int(sys.argv[1]),  rate_difference(LSTM_2_to_1, M_2_to_1, zeri_list),  f_error, len(LSTM_text),  n_train_steps,  argv[2],  float(argv[3])
-sys.stdout = orig
-f.close()
+L2_modif = mtr.L2_modif(M_2_to_1, LSTM_2_to_1, zeri_list)
+z_err = mtr.z_err(zeri_list, LSTM_freq)
+mtr.stampa_err(argv, L2_modif, z_err, Lgt)
