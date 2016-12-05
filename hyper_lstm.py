@@ -38,9 +38,7 @@ save_path = train_lstm(pars, graph, train_text, valid_text)
 LSTM_text = genera_testo(Lgt, graph, save_path)
 ############################
 
-
 LSTM_2_to_1, LSTM_dict, LSTM_freq, _ = estrai_matrice(LSTM_text)
-
 
 L2_modif = mtr.L2_modif(M_2_to_1, LSTM_2_to_1, zeri_list)
 z_err = mtr.z_err(zeri_list, LSTM_freq)
