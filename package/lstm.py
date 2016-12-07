@@ -105,7 +105,9 @@ with graph.as_default():
     cb = tf.Variable(tf.zeros([1, pars.num_nodes]))
     # Output gate: input, previous output, and bias.
 
+
     if pars.out_gate == 'output_gate=yes':
+
         ox = tf.Variable(tf.truncated_normal([vocabulary_size, pars.num_nodes], -0.1, 0.1))
         om = tf.Variable(tf.truncated_normal([pars.num_nodes, pars.num_nodes], -0.1, 0.1))
         ob = tf.Variable(tf.zeros([1, pars.num_nodes]))
@@ -118,6 +120,7 @@ with graph.as_default():
 
     saver = tf.train.Saver()
 
+    input_gate, forget_gate, output_gate = [0.,0.,0.]
     # Definition of the cell computation.
     def lstm_cell(i, o, state):
 	    #"""Create a LSTM cell. See e.g.: http://arxiv.org/pdf/1402.1128v1.pdf
@@ -131,7 +134,8 @@ with graph.as_default():
             output_gate = tf.sigmoid(tf.matmul(i, ox) + tf.matmul(o, om) + ob)
             return output_gate * tf.tanh(state), state
         else:
-            return tf.tanh(state), state
+            output_gate = 0.
+            return tf.tanh(state), state, input_gate, forget_gate, output_gate
 
     # Input data.
     train_data = list()
@@ -145,7 +149,7 @@ with graph.as_default():
     output = saved_output
     state = saved_state
     for i in train_inputs:
-        output, state = lstm_cell(i, output, state)
+        output, state, input_gate, forget_gate, output_gate = lstm_cell(i, output, state)
         outputs.append(output)
 
     # State saving across unrollings. in this way the recurrent state flows continuously in time, even
@@ -172,7 +176,7 @@ with graph.as_default():
     saved_sample_output = tf.Variable(tf.zeros([1, pars.num_nodes]))
     saved_sample_state = tf.Variable(tf.zeros([1, pars.num_nodes]))
     reset_sample_state = tf.group(saved_sample_output.assign(tf.zeros([1, pars.num_nodes])),saved_sample_state.assign(tf.zeros([1, pars.num_nodes])))
-    sample_output, sample_state = lstm_cell(sample_input, saved_sample_output, saved_sample_state)
+    sample_output, sample_state, input_gate, forget_gate, output_gate = lstm_cell(sample_input, saved_sample_output, saved_sample_state)
     with tf.control_dependencies([saved_sample_output.assign(sample_output),saved_sample_state.assign(sample_state)]):
         sample_prediction = tf.nn.softmax(tf.nn.xw_plus_b(sample_output, w, b))
 
@@ -239,8 +243,6 @@ def train_lstm(pars, graph, train_text, valid_text):
 def genera_testo(L, graph, save_path):
 	with tf.Session(graph=graph) as session:
 		saver.restore(session, save_path)
-			# Generate some samples.
-		#print('=' * 80)
 		for _ in range(1):
 			feed = sample(random_distribution())
 			sentence = characters(feed)[0]
@@ -249,6 +251,36 @@ def genera_testo(L, graph, save_path):
 				prediction = sample_prediction.eval({sample_input: feed, keep_prob: 1.})  ### the sampled letter is fed as new input
 				feed = sample(prediction)
 				sentence += characters(feed)[0]
-			#print(sentence[:1000])
-			#print('=' * 80)
 	return sentence
+
+def get_weights(graph, save_path, pars):
+    with tf.Session(graph=graph) as session:
+        saver.restore(session, save_path)
+        if pars.out_gate == 'output_gate=yes':
+            pesi_and_bias = session.run([cx, cm, cb, ix, im, ib, fx, fm, fb, ox, om, ob, w, b])
+        else:
+            pesi_and_bias = session.run([cx, cm, cb, ix, im, ib, fx, fm, fb, w, b])
+        return pesi_and_bias
+
+def neural_recordings(graph, save_path, valid_text):
+    with tf.Session(graph=graph) as session:
+        saver.restore(session, save_path)
+        valid_batches = BatchGenerator(valid_text, 1, 1)
+        reset_sample_state.run()    ######   <<<<<<<<<---------
+        rec = {}
+
+        for i in range(valid_size):
+            b = valid_batches.next()
+            #predictions, input_sw, for_sw, activ = session.run([sample_prediction, input_gate, forget_gate, state],{sample_input: b[0], keep_prob: 1.})
+            predictions, input_sw, for_sw, activ = session.run([sample_prediction, input_gate, forget_gate, sample_state],{sample_input: b[0], keep_prob: 1.})
+            if i == 0:
+                rec['in_sw'] = input_sw
+                rec['f_sw'] = for_sw
+                rec['activity'] = activ
+                rec['sftmx'] = predictions
+            else:
+                rec['in_sw'] = np.append(rec['in_sw'], input_sw, axis = 0)
+                rec['f_sw'] = np.append(rec['f_sw'], for_sw, axis = 0)
+                rec['activity'] = np.append(rec['activity'], activ, axis = 0)
+                rec['sftmx'] = np.append(rec['sftmx'], predictions, axis = 0)
+        return rec

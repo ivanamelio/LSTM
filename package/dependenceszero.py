@@ -8,6 +8,7 @@ import tensorflow as tf
 from six.moves import range
 import datetime
 import sys
+import matplotlib.pyplot as plt
 
 
 state_dict = ['a','c','e','h']        ##   <<<<<<<<---------------
